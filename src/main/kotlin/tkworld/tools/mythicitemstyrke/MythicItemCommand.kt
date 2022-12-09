@@ -15,7 +15,6 @@ object MythicItemCommand {
 
     @Awake(LifeCycle.ENABLE)
     fun init() {
-
         command(name = "itemcommand", aliases = listOf("ic"), permission = "*") {
             literal("give") {
                 dynamic {
@@ -77,11 +76,11 @@ object MythicItemCommand {
                 }
             }
             literal("run") {
-                dynamic(commit = "id") {
+                dynamic(comment = "id") {
                     suggestion<ProxyCommandSender> { _, _ ->
                         MythicMobs.inst().itemManager.items.map { it.internalName }.toList()
                     }
-                    dynamic(commit = "target") {
+                    dynamic(comment = "target") {
                         suggestion<ProxyCommandSender> { _, _ ->
                             Bukkit.getOnlinePlayers().map { it.name }
                         }

@@ -76,17 +76,15 @@ object MythicItemUI {
                     player.giveItem(element.getItemStackM(), amount)
                 }
             }
-            onBuild { inventory ->
+            set(49){
                 val key = data[player.uniqueId] ?: "无"
-                inventory.setItem(
-                    49, buildItem(XMaterial.OAK_SIGN) {
-                        name = "&f查询物品"
-                        lore.add("&7当前关键字: &f$key")
-                        lore.add(" ")
-                        lore.add("&7点击通过输入关键字查询物品")
-                        colored()
-                    }
-                )
+                buildItem(XMaterial.OAK_SIGN) {
+                    name = "&f查询物品"
+                    lore.add("&7当前关键字: &f$key")
+                    lore.add(" ")
+                    lore.add("&7点击通过输入关键字查询物品")
+                    colored()
+                }
             }
             setNextPage(51) { page, hasNextPage ->
                 if (hasNextPage) {
