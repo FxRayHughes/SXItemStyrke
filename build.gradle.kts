@@ -16,8 +16,9 @@ taboolib {
     install("module-effect")
     install("module-configuration")
     install("platform-bukkit")
+    relocate("ink.ptms.um","tkworld.tools.mythicitemstyrke.um")
     classifier = null
-    version = "6.0.10-29"
+    version = "6.0.11-31"
 }
 
 repositories {
@@ -27,6 +28,7 @@ repositories {
 dependencies {
     compileOnly("ink.ptms:nms-all:1.0.0")
     compileOnly("ink.ptms.core:v11200:11200")
+    taboo("ink.ptms:um:1.0.0-beta-30")
     compileOnly(kotlin("stdlib"))
     compileOnly(fileTree("libs"))
 }

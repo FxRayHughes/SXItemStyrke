@@ -1,0 +1,10 @@
+period: 200
+Slot:
+  - 36
+  - 37
+  - 38
+  - 39
+  - 40
+DSlot:
+  - "测试槽位"
+DSlot-Enable: false

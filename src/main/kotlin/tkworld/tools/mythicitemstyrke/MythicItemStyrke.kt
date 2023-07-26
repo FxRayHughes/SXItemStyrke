@@ -1,7 +1,7 @@
 package tkworld.tools.mythicitemstyrke
 
-import io.lumine.xikage.mythicmobs.api.bukkit.events.MythicMobDeathEvent
-import io.lumine.xikage.mythicmobs.io.MythicConfig
+import eos.moe.dragoncore.api.SlotAPI
+import eos.moe.dragoncore.api.event.KeyReleaseEvent
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.event.block.Action
@@ -18,19 +18,23 @@ import taboolib.common.platform.event.SubscribeEvent
 import taboolib.common.platform.function.submit
 import taboolib.common.util.random
 import taboolib.common5.Coerce
+import taboolib.library.configuration.ConfigurationSection
+import taboolib.module.configuration.Config
+import taboolib.module.configuration.ConfigFile
+import taboolib.module.configuration.ConfigSection
 import taboolib.platform.util.isAir
 import taboolib.platform.util.isNotAir
 import tkworld.tools.mythicitemstyrke.MythicItemStyrke.getAction
 
 object MythicItemStyrke : Plugin() {
 
-    fun cooldown(player: Player, config: MythicConfig): Boolean {
+    fun cooldown(player: Player, config: ConfigurationSection): Boolean {
         val enable = config.getBoolean("Styrke.cooldown.enable", false)
         if (!enable) {
             return true
         }
-        val group = config.getString("Styrke.cooldown.group", "default")
-        val time = config.getInteger("Styrke.cooldown.time", 0)
+        val group = config.getString("Styrke.cooldown.group", "default")!!
+        val time = config.getInt("Styrke.cooldown.time", 0)
         val save = AbolethAPI.get(player.uniqueId, "MICD::${group}", "0").toLongOrNull() ?: 0L
         if (save > System.currentTimeMillis()) {
             return false
@@ -39,9 +43,9 @@ object MythicItemStyrke : Plugin() {
         return true
     }
 
-    class ActionM(val list: MutableList<String>, val cancelled: Boolean)
+    class ActionM(val list: List<String>, val cancelled: Boolean)
 
-    private fun MythicConfig.getAction(key: String): ActionM {
+    private fun ConfigurationSection.getAction(key: String): ActionM {
         if (this.getStringList("Styrke.action.${key}!!").size != 0) {
             return ActionM(this.getStringList("Styrke.action.${key}"), true)
         }
@@ -57,10 +61,12 @@ object MythicItemStyrke : Plugin() {
         val item = event.player.inventory.itemInMainHand
         if (!item.isAir()) {
             val mmi = item.toMythicItem() ?: return
-            if (!cooldown(event.player, mmi.config)) {
+            val key = mmi.getItemId(item) ?: return
+            val config = mmi.getConfig(key) ?: return
+            if (!cooldown(event.player, config)) {
                 return
             }
-            val actionM = mmi.config.getAction("onBlockBreak")
+            val actionM = config.getAction("onBlockBreak")
             actionM.list.ketherEval(event.player)
             event.isCancelled = actionM.cancelled
         }
@@ -71,13 +77,15 @@ object MythicItemStyrke : Plugin() {
         val item = event.player.inventory.itemInMainHand
         if (!item.isAir()) {
             val mmi = item.toMythicItem() ?: return
-            if (!cooldown(event.player, mmi.config)) {
+            val key = mmi.getItemId(item) ?: return
+            val config = mmi.getConfig(key) ?: return
+            if (!cooldown(event.player, config)) {
                 return
             }
-            val actionM = mmi.config.getAction("onBlockPlace")
+            val actionM = config.getAction("onBlockPlace")
             actionM.list.ketherEval(event.player)
             event.isCancelled = actionM.cancelled
-            if (!mmi.config.getBoolean("Styrke.setting.place", true)) {
+            if (!config.getBoolean("Styrke.setting.place", true)) {
                 event.isCancelled = true
             }
         }
@@ -85,15 +93,18 @@ object MythicItemStyrke : Plugin() {
 
     @Awake(LifeCycle.ACTIVE)
     fun onTimer() {
-        submit(period = 200) {
+        val per = config.getLong("period",200)
+        submit(period = per) {
             Bukkit.getOnlinePlayers().forEach l@{ player ->
-                player.inventory.toList().forEach { item ->
-                    if (item != null && item.isNotAir()) {
+                getItems(player).forEach { item ->
+                    if (item.isNotAir()) {
                         val mmi = item.toMythicItem() ?: return@forEach
-                        if (!cooldown(player, mmi.config)) {
+                        val key = mmi.getItemId(item) ?: return@forEach
+                        val config = mmi.getConfig(key) ?: return@forEach
+                        if (!cooldown(player, config)) {
                             return@forEach
                         }
-                        mmi.config.getAction("onTimer").list.ketherEval(player)
+                        config.getAction("onTimer").list.ketherEval(player)
                     }
                 }
             }
@@ -107,10 +118,12 @@ object MythicItemStyrke : Plugin() {
         val item = player.inventory.itemInMainHand
         if (!item.isAir()) {
             val mmi = item.toMythicItem() ?: return
-            if (!cooldown(event.player, mmi.config)) {
+            val key = mmi.getItemId(item) ?: return
+            val config = mmi.getConfig(key) ?: return
+            if (!cooldown(event.player, config)) {
                 return
             }
-            mmi.config.getAction("onItemBreak").list.ketherEval(event.player)
+            config.getAction("onItemBreak").list.ketherEval(event.player)
 
         }
     }
@@ -122,10 +135,12 @@ object MythicItemStyrke : Plugin() {
         val item = player.inventory.itemInMainHand
         if (!item.isAir()) {
             val mmi = item.toMythicItem() ?: return
-            if (!cooldown(event.player, mmi.config)) {
+            val key = mmi.getItemId(item) ?: return
+            val config = mmi.getConfig(key) ?: return
+            if (!cooldown(event.player, config)) {
                 return
             }
-            val actionM = mmi.config.getAction("onItemConsume")
+            val actionM = config.getAction("onItemConsume")
             actionM.list.ketherEval(event.player)
             event.isCancelled = actionM.cancelled
 
@@ -139,10 +154,12 @@ object MythicItemStyrke : Plugin() {
         val item = event.item.itemStack
         if (!item.isAir()) {
             val mmi = item.toMythicItem() ?: return
-            if (!cooldown(event.player, mmi.config)) {
+            val key = mmi.getItemId(item) ?: return
+            val config = mmi.getConfig(key) ?: return
+            if (!cooldown(event.player, config)) {
                 return
             }
-            val actionM = mmi.config.getAction("onPickUp")
+            val actionM = config.getAction("onPickUp")
             actionM.list.ketherEval(event.player)
             event.isCancelled = actionM.cancelled
         }
@@ -154,10 +171,12 @@ object MythicItemStyrke : Plugin() {
         val item = event.itemDrop.itemStack
         if (!item.isAir()) {
             val mmi = item.toMythicItem() ?: return
-            if (!cooldown(event.player, mmi.config)) {
+            val key = mmi.getItemId(item) ?: return
+            val config = mmi.getConfig(key) ?: return
+            if (!cooldown(event.player, config)) {
                 return
             }
-            val actionM = mmi.config.getAction("onDrop")
+            val actionM = config.getAction("onDrop")
             actionM.list.ketherEval(event.player)
             event.isCancelled = actionM.cancelled
         }
@@ -166,17 +185,16 @@ object MythicItemStyrke : Plugin() {
     //跑
     @SubscribeEvent
     fun onPlayerToggleSprintEvent(event: PlayerToggleSprintEvent) {
-        val list = mutableListOf<ItemStack>()
-        list.addAll(event.player.inventory.armorContents)
-        list.add(event.player.inventory.itemInMainHand)
-        list.add(event.player.inventory.itemInOffHand)
+        val list = getItems(event.player)
         list.forEach { item ->
             if (!item.isAir()) {
                 val mmi = item.toMythicItem() ?: return
-                if (!cooldown(event.player, mmi.config)) {
+                val key = mmi.getItemId(item) ?: return
+                val config = mmi.getConfig(key) ?: return
+                if (!cooldown(event.player, config)) {
                     return
                 }
-                val actionM = mmi.config.getAction("onSprint")
+                val actionM = config.getAction("onSprint")
                 actionM.list.ketherEval(event.player)
             }
         }
@@ -191,10 +209,12 @@ object MythicItemStyrke : Plugin() {
             return
         }
         val mmi = item.toMythicItem() ?: return
-        if (!cooldown(event.player, mmi.config)) {
+        val key = mmi.getItemId(item) ?: return
+        val config = mmi.getConfig(key) ?: return
+        if (!cooldown(event.player, config)) {
             return
         }
-        val add = mmi.config.getInteger("Styrke.food.add")
+        val add = config.getInt("Styrke.food.add")
         if (add >= 1) {
             //设置饥饿值
             if (player.foodLevel + add >= 20) {
@@ -202,7 +222,7 @@ object MythicItemStyrke : Plugin() {
             } else if (player.foodLevel + add <= 0) {
                 player.foodLevel = 0
             } else {
-                player.foodLevel = player.foodLevel + add
+                player.foodLevel += add
             }
         }
     }
@@ -211,20 +231,26 @@ object MythicItemStyrke : Plugin() {
     @SubscribeEvent
     fun onPlayerSwapHandItemsEvent(event: PlayerSwapHandItemsEvent) {
         if (event.offHandItem.isNotAir()) {
-            val mmi = event.offHandItem!!.toMythicItem() ?: return
-            if (!cooldown(event.player, mmi.config)) {
+            val item = event.offHandItem!!
+            val mmi = item.toMythicItem() ?: return
+            val key = mmi.getItemId(item) ?: return
+            val config = mmi.getConfig(key) ?: return
+            if (!cooldown(event.player, config)) {
                 return
             }
-            val actionM = mmi.config.getAction("onSwapToOffhand")
+            val actionM = config.getAction("onSwapToOffhand")
             actionM.list.ketherEval(event.player)
             event.isCancelled = actionM.cancelled
         }
         if (event.mainHandItem.isNotAir()) {
-            val mmi = event.offHandItem!!.toMythicItem() ?: return
-            if (!cooldown(event.player, mmi.config)) {
+            val item = event.offHandItem!!
+            val mmi = item.toMythicItem() ?: return
+            val key = mmi.getItemId(item) ?: return
+            val config = mmi.getConfig(key) ?: return
+            if (!cooldown(event.player, config)) {
                 return
             }
-            val actionM = mmi.config.getAction("onSwapToMainHand")
+            val actionM = config.getAction("onSwapToMainHand")
             actionM.list.ketherEval(event.player)
             event.isCancelled = actionM.cancelled
         }
@@ -234,36 +260,67 @@ object MythicItemStyrke : Plugin() {
     @SubscribeEvent
     fun onPlayerInteractEvent(event: PlayerInteractEvent) {
         if (event.item.isNotAir()) {
-            val mmi = event.item!!.toMythicItem() ?: return
-            if (!cooldown(event.player, mmi.config)) {
+            val item = event.item!!
+            val mmi = item.toMythicItem() ?: return
+            val key = mmi.getItemId(item) ?: return
+            val config = mmi.getConfig(key) ?: return
+            if (!cooldown(event.player, config)) {
                 return
             }
-            if (mmi.config.getInteger("Styrke.setting.consume", 0) != 0) {
-                if (event.item!!.amount < mmi.config.getInteger("Styrke.setting.consume", 0)) {
-                    event.player.error("缺少物品!! 无法执行!!")
-                    return
-                } else {
-                    event.item!!.amount = event.item!!.amount - mmi.config.getInteger("Styrke.setting.consume", 0)
+            val actionMs = config.getAction("onStyrkeClickAll")
+            if (actionMs.list.isNotEmpty()) {
+                if (config.getInt("Styrke.setting.consume", 0) != 0) {
+                    if (event.item!!.amount < config.getInt("Styrke.setting.consume", 0)) {
+                        event.player.error("缺少物品!! 无法执行!!")
+                        return
+                    } else {
+                        event.item!!.amount -= config.getInt("Styrke.setting.consume", 0)
+                    }
                 }
             }
-            val actionMs = mmi.config.getAction("onStyrkeClickAll")
             actionMs.list.ketherEval(event.player)
             event.isCancelled = actionMs.cancelled
             when (event.action) {
                 Action.LEFT_CLICK_AIR, Action.LEFT_CLICK_BLOCK -> {
-                    val actionM = mmi.config.getAction("onLeftClick")
+                    if (config.getInt("Styrke.setting.consume", 0) != 0) {
+                        if (event.item!!.amount < config.getInt("Styrke.setting.consume", 0)) {
+                            event.player.error("缺少物品!! 无法执行!!")
+                            return
+                        } else {
+                            event.item!!.amount -= config.getInt("Styrke.setting.consume", 0)
+                        }
+                    }
+                    val actionM = config.getAction("onLeftClick")
                     actionM.list.ketherEval(event.player)
                     event.isCancelled = actionM.cancelled
+                    return
                 }
 
                 Action.RIGHT_CLICK_AIR, Action.RIGHT_CLICK_BLOCK -> {
-                    val actionM = mmi.config.getAction("onRightClick")
+                    if (config.getInt("Styrke.setting.consume", 0) != 0) {
+                        if (event.item!!.amount < config.getInt("Styrke.setting.consume", 0)) {
+                            event.player.error("缺少物品!! 无法执行!!")
+                            return
+                        } else {
+                            event.item!!.amount -= config.getInt("Styrke.setting.consume", 0)
+                        }
+                    }
+                    val actionM = config.getAction("onRightClick")
                     actionM.list.ketherEval(event.player)
                     event.isCancelled = actionM.cancelled
                 }
 
                 else -> {
-                    val actionM = mmi.config.getAction("onStyrkeClick")
+                    if (config.getInt("Styrke.setting.consume", 0) != 0) {
+                        if (event.item!!.amount < config.getInt("Styrke.setting.consume", 0)) {
+                            event.player.error("缺少物品!! 无法执行!!")
+                            return
+                        } else {
+                            event.item!!.amount =
+                                event.item!!.amount - config.getInt("Styrke.setting.consume", 0)
+                        }
+                    }
+                    val actionM = config.getAction("onStyrkeClick")
                     actionM.list.ketherEval(event.player)
                     event.isCancelled = actionM.cancelled
                 }
@@ -271,17 +328,45 @@ object MythicItemStyrke : Plugin() {
         }
     }
 
-    @SubscribeEvent
-    fun onMythicMobDeathEvent(e: MythicMobDeathEvent) {
-        e.mob.type.config.getStringList("Styrke.drops").forEach {
-            val args = it.split(" ")
-            if (args.size == 3 && !random(Coerce.toDouble(args[2]))) {
-                return@forEach
+    @Config
+    lateinit var config: ConfigFile
+
+
+    fun getItems(player: Player): MutableList<ItemStack> {
+        val list = mutableListOf<ItemStack>()
+        config.getIntegerList("Slot").forEach {
+            list.add(player.inventory.getItem(it) ?: return@forEach)
+        }
+        list.add(player.inventory.itemInMainHand)
+        list.add(player.inventory.itemInOffHand)
+        if (config.getBoolean("DSlot-Enable", false)) {
+            config.getStringList("DSlot").forEach {
+                list.add(SlotAPI.getCacheSlotItem(player, it))
             }
-            val item = args[0].getItemStackM()
-            val amount = args.getOrElse(1) { "1" }.split("-").map { a -> Coerce.toInteger(a) }
-            item.amount = random(amount[0], amount.getOrElse(1) { amount[0] })
-            e.drops.add(item)
+        }
+        return list
+    }
+
+    @SubscribeEvent
+    fun onKeyReleaseEvent(event: KeyReleaseEvent) {
+        val player = event.player
+        val items = getItems(player)
+        items.forEach { item ->
+            if (!item.isAir()) {
+                val mmi = item.toMythicItem() ?: return@forEach
+                if (!cooldown(event.player, config)) {
+                    return@forEach
+                }
+                if (config.getAction("onKeyRelease.key").list.isNotEmpty()) {
+                    if (config.getAction("onKeyRelease.key").list.contains(event.key)) {
+                        val actionM = config.getAction("onKeyRelease.action")
+                        actionM.list.ketherEval(event.player)
+                        event.isCancelled = actionM.cancelled
+                    }
+                }
+            }
         }
     }
+
+
 }

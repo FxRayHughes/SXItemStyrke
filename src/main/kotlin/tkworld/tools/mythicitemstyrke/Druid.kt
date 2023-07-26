@@ -1,9 +1,6 @@
 package tkworld.tools.mythicitemstyrke
 
-import io.lumine.xikage.mythicmobs.MythicMobs
-import io.lumine.xikage.mythicmobs.items.MythicItem
 import org.bukkit.Bukkit
-import org.bukkit.Material
 import org.bukkit.Sound
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
@@ -14,9 +11,8 @@ import taboolib.library.kether.LocalizedException
 import taboolib.module.kether.KetherShell
 import taboolib.module.kether.printKetherErrorMessage
 import taboolib.module.nms.getI18nName
-import taboolib.platform.util.hasLore
 import taboolib.platform.util.hasName
-import tkworld.tools.mythicitemstyrke.serializer.Serializer
+import tkworld.tools.mythicitemstyrke.itemdata.ItemData
 import tkworld.tools.mythicitemstyrke.weight.WeightCategory
 import tkworld.tools.mythicitemstyrke.weight.WeightUtil
 
@@ -74,71 +70,12 @@ fun String.center(prefix: String, suffix: String): String? {
 
 }
 
-fun String.range(): String {
-    if (this.center("{", "}") != null) {
-        val info = this.center("{", "}")!!.split("-")
-        // {10-20}
-        return this.replace(
-            "{${this.center("{", "}")}}",
-            ((info[0].toInt())..(info[1].toInt())).random().toString()
-        )
-    } else {
-        return this
-    }
+fun ItemData.getItemData(id: String, player: Player): ItemStack {
+    return MythicItemNatur.getItemStack(this, id, player)
 }
 
-fun ItemStack.isThis(value: String): Boolean {
-    if (this.name().contains(value, true)) {
-        return true
-    }
-    if (this.hasLore(value)) {
-        return true
-    }
-    if (this.type.toString().contains(value, true)) {
-        return true
-    }
-    if (this.toMythicItem()?.internalName == value) {
-        return true
-    }
-    return false
-}
-
-fun MythicItem.getItemStackM(): ItemStack {
-    return MythicItemNatur.getItemStack(this)
-}
-
-fun ItemStack.toMythicItem(): MythicItem? {
-    return MythicItemNatur.getMythicItem(this)
-}
-
-fun String.getItemStackM(): ItemStack {
-    return MythicItemNatur.getItemStack(MythicMobs.inst().itemManager.items.firstOrNull { it.internalName == this }!!)
-}
-
-fun ItemStack.toSerializerM(): String {
-    if (MythicItemNatur.getMythicItem(this) == null) {
-        return this.toSerializer()
-    }
-    return "MythicItem::${MythicItemNatur.getMythicItem(this)!!.internalName}::${this.amount}"
-}
-
-fun String.toItemStackM(): ItemStack {
-    if (this.startsWith("MythicItem::")) {
-        val args = this.split("::")
-        val itemStack =
-            MythicItemNatur.getItemStack(MythicMobs.inst().itemManager.getItem(args[1]).get()).clone()
-        itemStack.amount = args[2].toIntOrNull() ?: 1
-        return itemStack
-    }
-    return this.toItemStack() ?: ItemStack(Material.AIR)
-}
-
-fun ItemStack.toSerializer(): String {
-    return Serializer.fromItemStack(this)
-}
-
-fun String.toItemStack(): ItemStack {
-    return Serializer.toItemStack(this)
+fun ItemStack.toMythicItem(): ItemData? {
+    return MythicItemNatur.getItemData(this)
 }
 
 
