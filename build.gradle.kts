@@ -16,9 +16,10 @@ taboolib {
     install("module-effect")
     install("module-configuration")
     install("platform-bukkit")
+    install("expansion-command-helper")
     relocate("ink.ptms.um","tkworld.tools.mythicitemstyrke.um")
     classifier = null
-    version = "6.0.11-31"
+    version = "6.0.12-12"
 }
 
 repositories {

@@ -6,7 +6,9 @@ import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
+import taboolib.module.nms.getName
 import tkworld.tools.mythicitemstyrke.itemdata.ItemData
+import tkworld.tools.mythicitemstyrke.name
 
 object MythicItemData : ItemData {
 
@@ -19,8 +21,8 @@ object MythicItemData : ItemData {
         }
     }
 
-    override fun getItemList(): MutableList<ItemStack> {
-        return Mythic.API.getItemList().map { it.generateItemStack(1) }.toMutableList()
+    override fun getItemList(): MutableList<String> {
+        return Mythic.API.getItemList().map { it.internalName }.toMutableList()
     }
 
     override fun getItem(player: Player, id: String): ItemStack? {
@@ -28,7 +30,7 @@ object MythicItemData : ItemData {
     }
 
     override fun getItemId(itemStack: ItemStack): String? {
-        return Mythic.API.getItemId(itemStack)
+        return Mythic.API.getItemList().firstOrNull { it.displayName == itemStack.getName() }?.internalName
     }
 
     override fun getConfig(key: String): taboolib.library.configuration.ConfigurationSection? {

@@ -1,6 +1,7 @@
 package tkworld.tools.mythicitemstyrke
 
 import eos.moe.dragoncore.api.SlotAPI
+import eos.moe.dragoncore.api.event.KeyPressEvent
 import eos.moe.dragoncore.api.event.KeyReleaseEvent
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
@@ -19,11 +20,15 @@ import taboolib.common.platform.function.submit
 import taboolib.common.util.random
 import taboolib.common5.Coerce
 import taboolib.library.configuration.ConfigurationSection
+import taboolib.module.chat.colored
 import taboolib.module.configuration.Config
 import taboolib.module.configuration.ConfigFile
 import taboolib.module.configuration.ConfigSection
+import taboolib.module.configuration.util.getStringColored
+import taboolib.platform.compat.replacePlaceholder
 import taboolib.platform.util.isAir
 import taboolib.platform.util.isNotAir
+import taboolib.platform.util.sendActionBar
 import tkworld.tools.mythicitemstyrke.MythicItemStyrke.getAction
 
 object MythicItemStyrke : Plugin() {
@@ -37,6 +42,13 @@ object MythicItemStyrke : Plugin() {
         val time = config.getInt("Styrke.cooldown.time", 0)
         val save = AbolethAPI.get(player.uniqueId, "MICD::${group}", "0").toLongOrNull() ?: 0L
         if (save > System.currentTimeMillis()) {
+            if (config.getStringColored("Styrke.cooldown.message") != null) {
+                val scond = "%.2f".format(((save - System.currentTimeMillis()) / 1000.0))
+                if (config.getBoolean("Styrke.cooldown.actionbar", false)) {
+                    player.sendActionBar(config.getStringColored("Styrke.cooldown.message")!!.replace("{Time}", scond).replacePlaceholder(player).colored())
+                }
+                player.sendMessage(config.getStringColored("Styrke.cooldown.message")!!.replace("{Time}", scond).replacePlaceholder(player).colored())
+            }
             return false
         }
         AbolethAPI.edit(player.uniqueId, group, AbolethAction.SET, time + System.currentTimeMillis())
@@ -46,10 +58,10 @@ object MythicItemStyrke : Plugin() {
     class ActionM(val list: List<String>, val cancelled: Boolean)
 
     private fun ConfigurationSection.getAction(key: String): ActionM {
-        if (this.getStringList("Styrke.action.${key}!!").size != 0) {
+        if (this.getStringList("Styrke.action.${key}!!").isNotEmpty()) {
             return ActionM(this.getStringList("Styrke.action.${key}"), true)
         }
-        if (this.getStringList("Styrke.action.${key}").size != 0) {
+        if (this.getStringList("Styrke.action.${key}").isNotEmpty()) {
             return ActionM(this.getStringList("Styrke.action.${key}"), false)
         }
         return ActionM(mutableListOf(), false)
@@ -93,7 +105,7 @@ object MythicItemStyrke : Plugin() {
 
     @Awake(LifeCycle.ACTIVE)
     fun onTimer() {
-        val per = config.getLong("period",200)
+        val per = config.getLong("period", 200)
         submit(period = per) {
             Bukkit.getOnlinePlayers().forEach l@{ player ->
                 getItems(player).forEach { item ->
@@ -335,13 +347,13 @@ object MythicItemStyrke : Plugin() {
     fun getItems(player: Player): MutableList<ItemStack> {
         val list = mutableListOf<ItemStack>()
         config.getIntegerList("Slot").forEach {
-            list.add(player.inventory.getItem(it) ?: return@forEach)
+            list.add(player.inventory.getItem(it)?.clone() ?: return@forEach)
         }
-        list.add(player.inventory.itemInMainHand)
-        list.add(player.inventory.itemInOffHand)
+        list.add(player.inventory.itemInMainHand.clone())
+        list.add(player.inventory.itemInOffHand.clone())
         if (config.getBoolean("DSlot-Enable", false)) {
             config.getStringList("DSlot").forEach {
-                list.add(SlotAPI.getCacheSlotItem(player, it))
+                list.add(SlotAPI.getCacheSlotItem(player, it).clone())
             }
         }
         return list
@@ -351,9 +363,15 @@ object MythicItemStyrke : Plugin() {
     fun onKeyReleaseEvent(event: KeyReleaseEvent) {
         val player = event.player
         val items = getItems(player)
+        if (config.getBoolean("Styrke.setting.hand", false)) {
+            items.clear()
+            items.add(player.inventory.itemInMainHand)
+        }
         items.forEach { item ->
             if (!item.isAir()) {
-                val mmi = item.toMythicItem() ?: return@forEach
+                val mmi = item.toMythicItem() ?: return
+                val key = mmi.getItemId(item) ?: return
+                val config = mmi.getConfig(key) ?: return
                 if (!cooldown(event.player, config)) {
                     return@forEach
                 }

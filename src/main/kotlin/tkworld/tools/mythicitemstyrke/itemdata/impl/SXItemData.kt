@@ -9,6 +9,7 @@ import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.configuration.Configuration
+import taboolib.module.configuration.util.asMap
 import tkworld.tools.mythicitemstyrke.itemdata.ItemData
 
 object SXItemData : ItemData {
@@ -26,9 +27,8 @@ object SXItemData : ItemData {
         SXItem.getItemManager()
     }
 
-    override fun getItemList(): MutableList<ItemStack> {
-        val player = Bukkit.getOnlinePlayers().first() ?: return mutableListOf()
-        return itemManager.itemList.mapNotNull { getItem(player, it) }.toMutableList()
+    override fun getItemList(): MutableList<String> {
+        return itemManager.itemList.toMutableList()
     }
 
     override fun getItem(player: Player, id: String): ItemStack? {
@@ -46,7 +46,6 @@ object SXItemData : ItemData {
     }
 
     override fun getConfig(key: String): ConfigurationSection? {
-        val yamlConfiguration = itemManager.getGenerator(key)?.config as? YamlConfiguration ?: return null
-        return Configuration.loadFromOther(yamlConfiguration)
+        return Configuration.loadFromString(itemManager.getGenerator(key)?.configString ?: return null)
     }
 }

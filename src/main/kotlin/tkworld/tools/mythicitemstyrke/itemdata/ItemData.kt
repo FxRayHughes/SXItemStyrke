@@ -16,7 +16,7 @@ interface ItemData {
     /**
      * 物品列表
      */
-    fun getItemList(): MutableList<ItemStack> {
+    fun getItemList(): MutableList<String> {
 
         return mutableListOf()
     }
