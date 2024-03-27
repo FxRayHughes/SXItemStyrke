@@ -7,15 +7,23 @@
   natur: true
   Styrke:
     cooldown:
-      #感谢 炼金师853193857
-      #需使用Abo插件作为前置 支持跨服冷却
-      #https://xv5zac7cto.feishu.cn/docx/doxcnP4k0XN7IK7pcugdodQlJLh
-      #占用ID为 MICD::测试组
+      # 感谢 炼金师853193857
+      # 需使用Abo插件作为前置 支持跨服冷却
+      # https://xv5zac7cto.feishu.cn/docx/doxcnP4k0XN7IK7pcugdodQlJLh
+      # 占用ID为 MICD::测试组
       enable: true
       group: "测试组"
       time: 5000 #单位ms
       message: "&c你还需要等待 &e{Time} &c秒才能使用 支持papi"
       actionbar: false
+      # 冷却挂钩到MythicMobs的Skill中
+      # 启用此功能后冷却不由abo控制
+      # 本功能由 Tom.Bs 赞助
+      mythic: "测试技能"
+      # 是否启用本地冷却
+      local: false
+      # 优先级：mm > local > abo
+      # mm 默认null local 默认false abo默认 false
     setting:
       place: false
       consume: 1
@@ -29,10 +37,10 @@
       onCommand:
         - 'random: 2'
         - '10 | command "这条命令的权重是10"'
-        #(输出结果为重复两次的 上面这条命令)
-        #更多动作查看 https://kether.tabooproject.org/
+        # (输出结果为重复两次的 上面这条命令)
+        # 更多动作查看 https://kether.tabooproject.org/
       onKeyRelease:
-        #这里是具体看龙核写法
+        # 这里是具体看龙核写法
         key:
           - "Q"
           - "C"

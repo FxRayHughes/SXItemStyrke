@@ -1,25 +1,33 @@
+import io.izzel.taboolib.gradle.*
+
 plugins {
     `java-library`
     `maven-publish`
-    id("io.izzel.taboolib") version "1.51"
-    id("org.jetbrains.kotlin.jvm") version "1.5.10"
+    id("io.izzel.taboolib") version "2.0.11"
+    id("org.jetbrains.kotlin.jvm") version "1.9.22"
 }
 
 taboolib {
-    install("common")
-    install("common-5")
-    install("module-kether")
-    install("module-ui")
-    install("module-nms")
-    install("module-nms-util")
-    install("module-chat")
-    install("module-effect")
-    install("module-configuration")
-    install("platform-bukkit")
-    install("expansion-command-helper")
+//    install("common")
+//    install("common-5")
+//    install("module-kether")
+//    install("module-ui")
+//    install("module-nms")
+//    install("module-nms-util")
+//    install("module-chat")
+//    install("module-effect")
+//    install("module-configuration")
+//    install("platform-bukkit")
+//    install("expansion-command-helper")
     relocate("ink.ptms.um","tkworld.tools.mythicitemstyrke.um")
-    classifier = null
-    version = "6.0.12-12"
+//    classifier = null
+//    version = "6.0.12-26"
+    env {
+        install(UNIVERSAL, BUKKIT_ALL, NMS_UTIL, EFFECT, UI, KETHER)
+    }
+    version {
+        taboolib = "6.1.1-beta20"
+    }
 }
 
 repositories {
@@ -28,8 +36,9 @@ repositories {
 
 dependencies {
     compileOnly("ink.ptms:nms-all:1.0.0")
-    compileOnly("ink.ptms.core:v11200:11200")
-    taboo("ink.ptms:um:1.0.0-beta-30")
+    compileOnly("ink.ptms.core:v12001:12001:mapped")
+    compileOnly("ink.ptms.core:v12001:12001:universal")
+    taboo("ink.ptms:um:1.0.1")
     compileOnly(kotlin("stdlib"))
     compileOnly(fileTree("libs"))
 }

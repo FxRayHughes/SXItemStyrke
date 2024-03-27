@@ -1,7 +1,6 @@
 package tkworld.tools.mythicitemstyrke
 
 import eos.moe.dragoncore.api.SlotAPI
-import eos.moe.dragoncore.api.event.KeyPressEvent
 import eos.moe.dragoncore.api.event.KeyReleaseEvent
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
@@ -10,26 +9,20 @@ import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.player.*
 import org.bukkit.inventory.ItemStack
-import ray.mintcat.aboleth.api.AbolethAPI
-import ray.mintcat.aboleth.api.AbolethAction
 import taboolib.common.LifeCycle
 import taboolib.common.platform.Awake
 import taboolib.common.platform.Plugin
 import taboolib.common.platform.event.SubscribeEvent
 import taboolib.common.platform.function.submit
-import taboolib.common.util.random
-import taboolib.common5.Coerce
 import taboolib.library.configuration.ConfigurationSection
 import taboolib.module.chat.colored
 import taboolib.module.configuration.Config
 import taboolib.module.configuration.ConfigFile
-import taboolib.module.configuration.ConfigSection
 import taboolib.module.configuration.util.getStringColored
 import taboolib.platform.compat.replacePlaceholder
 import taboolib.platform.util.isAir
 import taboolib.platform.util.isNotAir
 import taboolib.platform.util.sendActionBar
-import tkworld.tools.mythicitemstyrke.MythicItemStyrke.getAction
 
 object MythicItemStyrke : Plugin() {
 
@@ -40,7 +33,19 @@ object MythicItemStyrke : Plugin() {
         }
         val group = config.getString("Styrke.cooldown.group", "default")!!
         val time = config.getInt("Styrke.cooldown.time", 0)
-        val save = AbolethAPI.get(player.uniqueId, "MICD::${group}", "0").toLongOrNull() ?: 0L
+        val mythic = config.getString("Styrke.cooldown.mythic", "error") ?: "error"
+        var type = CooldownAPI.CooldownType.ABOLETH
+        if (mythic != "error") {
+            type = CooldownAPI.CooldownType.MYTHIC
+        }
+        if (config.getBoolean("Styrke.cooldown.local", false)) {
+            type = CooldownAPI.CooldownType.LOCAL
+        }
+        var key = "MICD::${group}"
+        if (type == CooldownAPI.CooldownType.MYTHIC) {
+            key = mythic
+        }
+        val save = CooldownAPI.getCooldwon(player, key, type)
         if (save > System.currentTimeMillis()) {
             if (config.getStringColored("Styrke.cooldown.message") != null) {
                 val scond = "%.2f".format(((save - System.currentTimeMillis()) / 1000.0))
@@ -51,7 +56,9 @@ object MythicItemStyrke : Plugin() {
             }
             return false
         }
-        AbolethAPI.edit(player.uniqueId, group, AbolethAction.SET, time + System.currentTimeMillis())
+        if (type != CooldownAPI.CooldownType.MYTHIC) {
+            CooldownAPI.setCooldown(player, key, time.toLong(), type)
+        }
         return true
     }
 
@@ -272,7 +279,7 @@ object MythicItemStyrke : Plugin() {
     @SubscribeEvent
     fun onPlayerInteractEvent(event: PlayerInteractEvent) {
         if (event.item.isNotAir()) {
-            val item = event.item!!
+            val item = event.item ?: return
             val mmi = item.toMythicItem() ?: return
             val key = mmi.getItemId(item) ?: return
             val config = mmi.getConfig(key) ?: return
@@ -328,8 +335,7 @@ object MythicItemStyrke : Plugin() {
                             event.player.error("缺少物品!! 无法执行!!")
                             return
                         } else {
-                            event.item!!.amount =
-                                event.item!!.amount - config.getInt("Styrke.setting.consume", 0)
+                            event.item!!.amount -= config.getInt("Styrke.setting.consume", 0)
                         }
                     }
                     val actionM = config.getAction("onStyrkeClick")
@@ -353,7 +359,10 @@ object MythicItemStyrke : Plugin() {
         list.add(player.inventory.itemInOffHand.clone())
         if (config.getBoolean("DSlot-Enable", false)) {
             config.getStringList("DSlot").forEach {
-                list.add(SlotAPI.getCacheSlotItem(player, it).clone())
+                val clone = SlotAPI.getCacheSlotItem(player, it)
+                if (clone != null && clone.isNotAir()) {
+                    list.add(clone.clone())
+                }
             }
         }
         return list
